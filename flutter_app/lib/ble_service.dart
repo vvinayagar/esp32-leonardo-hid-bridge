@@ -19,6 +19,7 @@ class BleService extends ChangeNotifier {
   PermissionStatus? _connectPermission;
   bool _hasService = false;
   bool _hasWriteChar = false;
+  bool _discovering = false;
 
   BluetoothDevice? _device;
   BluetoothCharacteristic? _writeChar;
@@ -207,9 +208,7 @@ class BleService extends ChangeNotifier {
 
     await stopScan();
 
-    _device = result.device;
-    _hasService = false;
-    _hasWriteChar = false;
+    _attachDevice(result.device);
     await _stateSub?.cancel();
     _stateSub = _device!.connectionState.listen((state) {
       _deviceState = state;
@@ -225,27 +224,39 @@ class BleService extends ChangeNotifier {
     _deviceState = BluetoothConnectionState.connected;
     notifyListeners();
 
-    final services = await _device!.discoverServices();
-    for (final service in services) {
-      if (service.uuid == serviceUuid) {
-        _hasService = true;
-        for (final char in service.characteristics) {
-          if (char.uuid == writeUuid) {
-            _writeChar = char;
-            _hasWriteChar = true;
-            notifyListeners();
-            return;
-          }
-        }
-      }
+    await _discoverAndCache();
+  }
+
+  Future<void> connectById(String remoteId, {bool autoConnect = true}) async {
+    clearError();
+    final permissionsOk = await ensurePermissions();
+    if (!permissionsOk) {
+      throw Exception(_lastError ?? 'Bluetooth permission denied');
     }
 
-    throw Exception('Write characteristic not found');
+    final bluetoothOk = await ensureBluetoothOn();
+    if (!bluetoothOk) {
+      throw Exception(_lastError ?? 'Bluetooth is off');
+    }
+
+    await stopScan();
+    _attachDevice(BluetoothDevice.fromId(remoteId));
+
+    await _device!.connect(
+      autoConnect: autoConnect,
+      mtu: autoConnect ? null : 512,
+    );
+
+    if (_device!.isConnected) {
+      _deviceState = BluetoothConnectionState.connected;
+      notifyListeners();
+      await _discoverAndCache();
+    }
   }
 
   Future<void> disconnect() async {
     if (_device != null) {
-      await _device!.disconnect();
+      await _device!.disconnect(queue: false);
     }
     _deviceState = BluetoothConnectionState.disconnected;
     _writeChar = null;
@@ -260,7 +271,22 @@ class BleService extends ChangeNotifier {
     }
     final value = utf8.encode(line);
     final withoutResponse = _writeChar!.properties.writeWithoutResponse;
-    await _writeChar!.write(value, withoutResponse: withoutResponse);
+    final mtu = _device?.mtuNow ?? 23;
+    final maxPayload = (mtu - 3).clamp(1, 512);
+    final chunkSize = withoutResponse
+        ? (maxPayload < 20 ? maxPayload : 20)
+        : maxPayload;
+
+    for (var offset = 0; offset < value.length; offset += chunkSize) {
+      final end = (offset + chunkSize) > value.length
+          ? value.length
+          : offset + chunkSize;
+      final chunk = value.sublist(offset, end);
+      await _writeChar!.write(chunk, withoutResponse: withoutResponse);
+      if (withoutResponse && end < value.length) {
+        await Future.delayed(const Duration(milliseconds: 8));
+      }
+    }
   }
 
   @override
@@ -269,5 +295,52 @@ class BleService extends ChangeNotifier {
     _stateSub?.cancel();
     _adapterSub?.cancel();
     super.dispose();
+  }
+
+  void _attachDevice(BluetoothDevice device) {
+    _device = device;
+    _hasService = false;
+    _hasWriteChar = false;
+    _writeChar = null;
+    _stateSub?.cancel();
+    _stateSub = _device!.connectionState.listen((state) {
+      _deviceState = state;
+      if (state == BluetoothConnectionState.connected) {
+        _discoverAndCache().catchError(
+          (e) => _setError('Service discovery failed: $e'),
+        );
+      } else if (state == BluetoothConnectionState.disconnected) {
+        _writeChar = null;
+        _hasService = false;
+        _hasWriteChar = false;
+      }
+      notifyListeners();
+    });
+  }
+
+  Future<void> _discoverAndCache() async {
+    if (_device == null || _discovering) return;
+    _discovering = true;
+    try {
+      final services = await _device!.discoverServices();
+      for (final service in services) {
+        if (service.uuid == serviceUuid) {
+          _hasService = true;
+          for (final char in service.characteristics) {
+            if (char.uuid == writeUuid) {
+              _writeChar = char;
+              _hasWriteChar = true;
+              notifyListeners();
+              _discovering = false;
+              return;
+            }
+          }
+        }
+      }
+    } finally {
+      _discovering = false;
+    }
+
+    throw Exception('Write characteristic not found');
   }
 }

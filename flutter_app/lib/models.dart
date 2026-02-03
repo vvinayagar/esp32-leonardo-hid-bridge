@@ -1,6 +1,6 @@
 class MacroLine {
-  final String template;
-  const MacroLine(this.template);
+  final String command;
+  const MacroLine(this.command);
 }
 
 class Macro {
@@ -8,12 +8,14 @@ class Macro {
   final String name;
   final String? description;
   final List<MacroLine> lines;
+  final bool isCustom;
 
   const Macro({
     required this.id,
     required this.name,
     this.description,
     required this.lines,
+    this.isCustom = false,
   });
 }
 
@@ -23,7 +25,7 @@ const List<Macro> predefinedMacros = [
     name: 'ARM ON',
     description: 'Enable command execution on Leonardo',
     lines: [
-      MacroLine('TOKEN={TOKEN};ARM:ON\n'),
+      MacroLine('ARM:ON'),
     ],
   ),
   Macro(
@@ -31,7 +33,7 @@ const List<Macro> predefinedMacros = [
     name: 'ARM OFF',
     description: 'Disable command execution on Leonardo',
     lines: [
-      MacroLine('TOKEN={TOKEN};ARM:OFF\n'),
+      MacroLine('ARM:OFF'),
     ],
   ),
   Macro(
@@ -39,7 +41,7 @@ const List<Macro> predefinedMacros = [
     name: 'Open Run dialog (Win+R)',
     description: 'Windows Run dialog',
     lines: [
-      MacroLine('TOKEN={TOKEN};HOTKEY:WIN+R\n'),
+      MacroLine('HOTKEY:WIN+R'),
     ],
   ),
   Macro(
@@ -47,7 +49,7 @@ const List<Macro> predefinedMacros = [
     name: 'Open Terminal (Ctrl+Alt+T)',
     description: 'Common Linux terminal shortcut',
     lines: [
-      MacroLine('TOKEN={TOKEN};HOTKEY:CTRL+ALT+T\n'),
+      MacroLine('HOTKEY:CTRL+ALT+T'),
     ],
   ),
   Macro(
@@ -55,11 +57,11 @@ const List<Macro> predefinedMacros = [
     name: 'Type Email Template',
     description: 'Quick multi-line email starter',
     lines: [
-      MacroLine('TOKEN={TOKEN};TYPE:Hello,\n'),
-      MacroLine('TOKEN={TOKEN};KEY:ENTER\n'),
-      MacroLine('TOKEN={TOKEN};TYPE:Please find the update below.\n'),
-      MacroLine('TOKEN={TOKEN};KEY:ENTER\n'),
-      MacroLine('TOKEN={TOKEN};TYPE:Thanks.\n'),
+      MacroLine('TYPE:Hello,'),
+      MacroLine('KEY:ENTER'),
+      MacroLine('TYPE:Please find the update below.'),
+      MacroLine('KEY:ENTER'),
+      MacroLine('TYPE:Thanks.'),
     ],
   ),
   Macro(
@@ -67,8 +69,8 @@ const List<Macro> predefinedMacros = [
     name: 'Demo: Hello + Enter',
     description: 'Simple type and enter',
     lines: [
-      MacroLine('TOKEN={TOKEN};TYPE:hello from phone\n'),
-      MacroLine('TOKEN={TOKEN};KEY:ENTER\n'),
+      MacroLine('TYPE:hello from phone'),
+      MacroLine('KEY:ENTER'),
     ],
   ),
   Macro(
@@ -76,11 +78,11 @@ const List<Macro> predefinedMacros = [
     name: 'Demo: Tab x3',
     description: 'Tab three times with small delays',
     lines: [
-      MacroLine('TOKEN={TOKEN};KEY:TAB\n'),
-      MacroLine('TOKEN={TOKEN};DELAY:150\n'),
-      MacroLine('TOKEN={TOKEN};KEY:TAB\n'),
-      MacroLine('TOKEN={TOKEN};DELAY:150\n'),
-      MacroLine('TOKEN={TOKEN};KEY:TAB\n'),
+      MacroLine('KEY:TAB'),
+      MacroLine('DELAY:150'),
+      MacroLine('KEY:TAB'),
+      MacroLine('DELAY:150'),
+      MacroLine('KEY:TAB'),
     ],
   ),
 ];

@@ -6,6 +6,8 @@ Flutter Android app -> BLE -> ESP32 -> UART -> Arduino Leonardo -> USB HID -> La
 
 Use it only with devices you own or have permission to control.
 
+Optional path: Flutter app -> Wi-Fi UDP -> Windows desktop receiver (no ESP32 required).
+
 ## Architecture
 
 ```
@@ -43,6 +45,11 @@ Commands:
 - KEY:ENTER | KEY:TAB | KEY:ESC | KEY:BACKSPACE | KEY:UP | KEY:DOWN | KEY:LEFT | KEY:RIGHT
 - HOTKEY:CTRL+ALT+T (modifiers: CTRL/ALT/SHIFT/WIN + final key)
 - DELAY:<ms> (max 5000)
+- MOUSE:MOVE:<dx>,<dy> (relative move, values are clamped to -127..127)
+- MOUSE:SCROLL:<dy> (vertical scroll)
+- MOUSE:DOWN:<LEFT|RIGHT|MIDDLE>
+- MOUSE:UP:<LEFT|RIGHT|MIDDLE>
+- MOUSE:CLICK:<LEFT|RIGHT|MIDDLE>
 
 The ESP32 checks the token prefix. If missing or wrong, it logs AUTH FAIL and ignores the line.
 
@@ -76,7 +83,25 @@ flutter run
 
 - The app uses flutter_blue_plus and requires Android BLE permissions.
 - Open settings (gear icon) to edit token and toggle Auto ARM on connect.
-- The Control screen includes manual buttons plus a Macros section.
+- The Control screen includes manual buttons, pointer control (air mouse + trackpad), and macros.
+- Use the Targets chips to send commands to ESP32 BLE, the Windows receiver, or both.
+- Custom macros (including passwords) are stored in encrypted storage on the phone.
+
+### 1b) Windows desktop receiver (Wi-Fi)
+
+The desktop receiver listens for UDP commands and executes them locally on Windows.
+
+```
+cd desktop_app
+pip install -r requirements.txt
+python windows_receiver.py
+```
+
+Requires Python 3.9+ and pip.
+
+In the Flutter app settings, set Desktop Host to your PC IP and Desktop Port to 51515.
+Allow UDP through Windows Firewall if prompted.
+The desktop receiver also obeys ARM:ON / ARM:OFF.
 
 ### 2) ESP32 firmware (Arduino framework)
 
@@ -96,6 +121,9 @@ flutter run
 
 Macros are preprogrammed sequences of command lines. When tapped, each line is sent in order
 with a short delay between lines. You can stop a running macro with the Stop button.
+
+Custom macros can be added from the Control screen. Password macros will send TYPE + optional
+ENTER and are stored in encrypted storage on the device.
 
 ## Troubleshooting
 

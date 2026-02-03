@@ -1,4 +1,5 @@
 #include <Keyboard.h>
+#include <Mouse.h>
 
 static const uint16_t kMaxLineLength = 200;
 static bool gArmed = false;
@@ -37,6 +38,15 @@ uint8_t keyFromName(const String& keyName, bool& ok) {
   return 0;
 }
 
+uint8_t mouseButtonFromName(const String& buttonName, bool& ok) {
+  ok = true;
+  if (buttonName == "LEFT") return MOUSE_LEFT;
+  if (buttonName == "RIGHT") return MOUSE_RIGHT;
+  if (buttonName == "MIDDLE") return MOUSE_MIDDLE;
+  ok = false;
+  return 0;
+}
+
 void handleType(const String& text) {
   if (!gArmed) {
     logAction("IGNORED (DISARMED): TYPE");
@@ -71,6 +81,81 @@ void handleDelay(const String& msString) {
   if (ms > 5000) ms = 5000;
   logAction("DELAY: " + String(ms));
   delay(ms);
+}
+
+void handleMouseMove(const String& args) {
+  int commaIndex = args.indexOf(',');
+  if (commaIndex < 0) {
+    logAction("MOUSE MOVE invalid args");
+    return;
+  }
+  int dx = args.substring(0, commaIndex).toInt();
+  int dy = args.substring(commaIndex + 1).toInt();
+  dx = constrain(dx, -127, 127);
+  dy = constrain(dy, -127, 127);
+  Mouse.move(dx, dy, 0);
+  logAction("MOUSE MOVE: " + String(dx) + "," + String(dy));
+}
+
+void handleMouseScroll(const String& args) {
+  int dy = 0;
+  int commaIndex = args.indexOf(',');
+  if (commaIndex >= 0) {
+    dy = args.substring(commaIndex + 1).toInt();
+  } else {
+    dy = args.toInt();
+  }
+  dy = constrain(dy, -127, 127);
+  Mouse.move(0, 0, dy);
+  logAction("MOUSE SCROLL: " + String(dy));
+}
+
+void handleMouseButton(const String& action, const String& buttonName) {
+  bool ok = false;
+  String name = buttonName;
+  name.toUpperCase();
+  uint8_t button = mouseButtonFromName(name, ok);
+  if (!ok) {
+    logAction("UNKNOWN MOUSE BUTTON: " + buttonName);
+    return;
+  }
+  if (action == "DOWN") {
+    Mouse.press(button);
+  } else if (action == "UP") {
+    Mouse.release(button);
+  } else if (action == "CLICK") {
+    Mouse.click(button);
+  } else {
+    logAction("UNKNOWN MOUSE ACTION: " + action);
+    return;
+  }
+  logAction("MOUSE " + action + ": " + name);
+}
+
+void handleMouse(const String& payload) {
+  if (!gArmed) {
+    logAction("IGNORED (DISARMED): MOUSE");
+    return;
+  }
+  int colonIndex = payload.indexOf(':');
+  String action = colonIndex >= 0 ? payload.substring(0, colonIndex) : payload;
+  String args = colonIndex >= 0 ? payload.substring(colonIndex + 1) : "";
+  action.toUpperCase();
+
+  if (action == "MOVE") {
+    handleMouseMove(args);
+    return;
+  }
+  if (action == "SCROLL") {
+    handleMouseScroll(args);
+    return;
+  }
+  if (action == "DOWN" || action == "UP" || action == "CLICK") {
+    handleMouseButton(action, args);
+    return;
+  }
+
+  logAction("UNKNOWN MOUSE CMD: " + payload);
 }
 
 void handleHotkey(const String& combo) {
@@ -157,6 +242,10 @@ void handleCommand(const String& line) {
     handleHotkey(line.substring(7));
     return;
   }
+  if (line.startsWith("MOUSE:")) {
+    handleMouse(line.substring(6));
+    return;
+  }
   if (line.startsWith("DELAY:")) {
     handleDelay(line.substring(6));
     return;
@@ -171,6 +260,7 @@ void setup() {
 
   delay(3000); // Startup safety delay
   Keyboard.begin();
+  Mouse.begin();
 
   logAction("Leonardo HID bridge ready (ARMED=false)");
 }
