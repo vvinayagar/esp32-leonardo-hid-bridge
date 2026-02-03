@@ -1,0 +1,3 @@
+# Arduino CLI / IDE data (downloaded cores, tools, libraries)
+.arduino-data/
+.arduino-sketchbook/

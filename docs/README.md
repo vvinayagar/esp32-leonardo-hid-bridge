@@ -48,6 +48,24 @@ The ESP32 checks the token prefix. If missing or wrong, it logs AUTH FAIL and ig
 
 ## Build / Flash / Run
 
+### Arduino packages (boards + libraries)
+
+Install these once before flashing:
+
+Arduino IDE:
+- Boards Manager: install "esp32 by Espressif Systems".
+- Boards Manager: install "Arduino AVR Boards" (for Leonardo).
+- Library Manager: install "NimBLE-Arduino" (by h2zero).
+
+Arduino CLI (uses `.arduino-cli.yaml` in this repo):
+
+```
+arduino-cli --config-file .arduino-cli.yaml core update-index
+arduino-cli --config-file .arduino-cli.yaml core install esp32:esp32
+arduino-cli --config-file .arduino-cli.yaml core install arduino:avr
+arduino-cli --config-file .arduino-cli.yaml lib install "NimBLE-Arduino"
+```
+
 ### 1) Flutter Android app
 
 ```
@@ -62,16 +80,17 @@ flutter run
 
 ### 2) ESP32 firmware (Arduino framework)
 
-1. Install NimBLE-Arduino library (Arduino IDE -> Library Manager).
+1. Ensure the ESP32 core and NimBLE-Arduino are installed (see above).
 2. Select board: ESP32 Dev Module (or your ESP32-WROOM board).
 3. Open `esp32_firmware/esp32_hid_bridge.ino`.
 4. Flash to the ESP32.
 
 ### 3) Arduino Leonardo firmware
 
-1. Select board: Arduino Leonardo.
-2. Open `leonardo_firmware/leonardo_hid_bridge.ino`.
-3. Flash to the Leonardo.
+1. Ensure the Arduino AVR Boards package is installed (see above).
+2. Select board: Arduino Leonardo.
+3. Open `leonardo_firmware/leonardo_hid_bridge.ino`.
+4. Flash to the Leonardo.
 
 ## Flutter App Macros
 
